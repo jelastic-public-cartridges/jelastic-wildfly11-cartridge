@@ -1,0 +1,48 @@
+#!/bin/bash -eu
+
+source /etc/jelastic/environment
+
+mkdir -p ${OPENSHIFT_WILDFLY11_DIR}/{pid,logs}
+
+/sbin/iptables -t nat -I PREROUTING -p tcp -m tcp --dport 4949 -j REDIRECT --to-ports 9990
+/sbin/iptables -t nat -I PREROUTING -p tcp -m tcp --dport 4848 -j REDIRECT --to-ports 9993
+#/sbin/iptables -t nat -I PREROUTING -p tcp -m tcp --dport 443 -j REDIRECT --to-ports 8443
+iptables -t nat -D PREROUTING -p tcp -m tcp --dport 443 -j REDIRECT --to-ports 8743
+iptables -t nat -D PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080
+service iptables save
+
+[ -f ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/.jboss-cli-history ] || touch ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/.jboss-cli-history
+
+NODE_IDENTIFIER=`< /dev/urandom tr -dc a-z0-9 | head -c16`;
+sed -i "s/core-environment node-identifier=\".*\"/core-environment node-identifier=\"$NODE_IDENTIFIER\"/" ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/standalone.xml;
+
+if [ ! -e ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/server.keystore ]
+then
+cd /usr/java/latest/bin;
+keypass=`tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1`;
+appkeypass=`tr -cd '[:alnum:]' < /dev/urandom | fold -w30 | head -n1`;
+./keytool -genkeypair -alias serverkey -keyalg RSA -keysize 2048 -validity 7360 -keystore server.keystore -keypass $keypass -storepass $keypass -dname "cn=Server Administrator,o=Acme,c=GB";
+./keytool -genkeypair -alias server -keyalg RSA -keysize 2048 -validity 7360 -keystore application.keystore -keypass $appkeypass -storepass $appkeypass -dname "cn=Server Administrator,o=Acme,c=GB";
+mv /usr/java/latest/bin/server.keystore ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/;
+mv /usr/java/latest/bin/application.keystore ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/;
+chown jelastic:jelastic ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/*.keystore;
+
+XML_CONFIG_FILES=("standalone.xml" "standalone-full.xml" "standalone-ha.xml" "standalone-full-ha.xml")
+
+for file in "${XML_CONFIG_FILES[@]}"
+do
+    sed -i s/theremustbethesslcertpass/$keypass/ ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/${file};
+    sed -i s/theremustbetheappcertpass/$appkeypass/ ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/standalone/configuration/${file};
+done
+
+fi
+
+if [ -d "${OPENSHIFT_WILDFLY11_DIR}/.ssh" ] ; then
+    cp -r /opt/repo/.ssh /opt/repo/home/
+fi
+
+[ -f "${OPENSHIFT_WILDFLY11_DIR}/.bash_profile" ] && cp ${OPENSHIFT_WILDFLY11_DIR}/.bash_profile ${OPENSHIFT_WILDFLY11_DIR}/home/ ;
+[ -f "${OPENSHIFT_WILDFLY11_DIR}/.bash_history" ] && cp ${OPENSHIFT_WILDFLY11_DIR}/.bash_history ${OPENSHIFT_WILDFLY11_DIR}/home/ ;
+[ -f "${OPENSHIFT_WILDFLY11_DIR}/.profile" ] && cp ${OPENSHIFT_WILDFLY11_DIR}/.profile ${OPENSHIFT_WILDFLY11_DIR}/home/ ;
+
+yum -y install libaio &>/dev/null;
