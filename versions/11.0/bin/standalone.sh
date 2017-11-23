@@ -317,7 +317,6 @@ while true; do
          org.jboss.as.standalone \
          -Djboss.home.dir=\""$JBOSS_HOME"\" \
          -Djboss.server.base.dir=\""$JBOSS_BASE_DIR"\" \
-         "$SERVER_OPTS"
 	 -c $WILDFLY_XML_CONFIG "$SERVER_OPTS"
       JBOSS_STATUS=$?
    else
