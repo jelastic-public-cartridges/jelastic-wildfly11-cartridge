@@ -47,11 +47,16 @@
                 <authorization map-groups-to-roles="false">
                     <properties path="mgmt-groups.properties" relative-to="jboss.server.config.dir"/>
                 </authorization>
+                <server-identities>
+                 <ssl>
+                     <keystore path="server.keystore" relative-to="jboss.server.config.dir" keystore-password="theremustbethesslcertpass" alias="serverkey"/>
+                 </ssl>
+                 </server-identities>
             </security-realm>
             <security-realm name="ApplicationRealm">
                 <server-identities>
                     <ssl>
-                        <keystore path="application.keystore" relative-to="jboss.server.config.dir" keystore-password="password" alias="server" key-password="password" generate-self-signed-certificate-host="localhost"/>
+                        <keystore path="application.keystore" relative-to="jboss.server.config.dir" keystore-password="theremustbetheappcertpass" alias="server"/>
                     </ssl>
                 </server-identities>
                 <authentication>
@@ -79,7 +84,7 @@
         <management-interfaces>
             <http-interface security-realm="ManagementRealm">
                 <http-upgrade enabled="true"/>
-                <socket-binding http="management-http"/>
+                <socket-binding http="management-http" https="management-https"/>
             </http-interface>
         </management-interfaces>
         <access-control provider="simple">
