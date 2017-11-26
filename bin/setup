@@ -4,11 +4,8 @@ source /etc/jelastic/environment
 
 mkdir -p ${OPENSHIFT_WILDFLY11_DIR}/{pid,logs}
 
-/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 4949 -j REDIRECT --to-ports 9990
-/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 4848 -j REDIRECT --to-ports 9993
-#/sbin/iptables -t nat -I PREROUTING -p tcp -m tcp --dport 443 -j REDIRECT --to-ports 8443
-/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 443 -j REDIRECT --to-ports 8743
-/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080
+/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 443 -j REDIRECT --to-ports 8743 &>/dev/null
+/sbin/iptables -t nat -D PREROUTING -p tcp -m tcp --dport 80 -j REDIRECT --to-ports 8080 &>/dev/null
 service iptables save
 
 [ -f ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/.jboss-cli-history ] || touch ${OPENSHIFT_WILDFLY11_DIR}/versions/${Version}/.jboss-cli-history
